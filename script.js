@@ -54,44 +54,54 @@
   var cachedSvgText = null;
   async function getJapanSvgText() {
     if (cachedSvgText) return cachedSvgText;
-    const res = await fetch("https://cdn.jsdelivr.net/gh/static-166/statics@main/map.svg");
+    const res = await fetch("./map.svg");
     cachedSvgText = await res.text();
     return cachedSvgText;
   }
   async function renderJapanMapToContainer($container, targetId, clearedIds = /* @__PURE__ */ new Set()) {
     const svgText = await getJapanSvgText();
     $container.html(svgText);
-    const svg = $container.find("svg");
+    const svg = $container.find("svg")[0];
     if (!svg) return;
     svg.removeAttribute("width");
     svg.removeAttribute("height");
     svg.classList.add("japan-map-svg");
-    const prefs = svg.querySelectorAll(".prefecture, [data-code]");
+    const prefs = svg.querySelectorAll("[data-code]");
     let targetEl = null;
     prefs.forEach((el) => {
       const code = Number(el.getAttribute("data-code"));
       if (!code) return;
-      el.classList.add("map-pref");
-      el.removeAttribute("style");
+      const shapes = el.matches("path, polygon, rect") ? [el] : el.querySelectorAll("path, polygon, rect");
+      const targets = shapes.length > 0 ? shapes : [el];
+      targets.forEach((s) => {
+        s.classList.add("map-pref");
+        s.removeAttribute("fill");
+        s.removeAttribute("stroke");
+        s.removeAttribute("style");
+        if (code === targetId) {
+          s.classList.add("is-target");
+        } else if (clearedIds.has(code)) {
+          s.classList.add("is-cleared");
+        }
+      });
       if (code === targetId) {
-        el.classList.add("is-target");
         targetEl = el;
-      } else if (clearedIds.has(code)) {
-        el.classList.add("is-cleared");
       }
     });
     if (targetEl && typeof targetEl.getBBox === "function") {
       const bbox = targetEl.getBBox();
       const cx = bbox.x + bbox.width / 2;
       const cy = bbox.y + bbox.height / 2;
-      const ns = "http://w3.org";
+      const vb = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : { width: 1e3 };
+      const scale = Math.max(1, (vb.width || 1e3) / 400);
+      const ns = "http://w3.org/2000/svg";
       const g = document.createElementNS(ns, "g");
       g.setAttribute("class", "map-pointer");
-      g.setAttribute("transform", `translate(${cx}, ${cy})`);
+      g.setAttribute("transform", `translate(${cx}, ${cy}) scale(${scale})`);
       g.innerHTML = `
       <circle r="18" class="pointer-ring" />
       <circle r="5" class="pointer-dot" />
-      <path d="M 0,-32 L -8,-16 L 8,-16 Z" class="pointer-arrow" />
+      <path d="M 0,-34 L -9,-16 L 9,-16 Z" class="pointer-arrow" />
     `;
       svg.appendChild(g);
     }
