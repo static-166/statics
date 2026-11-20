@@ -383,7 +383,7 @@
     var cachedSvgText = null;
     async function getJapanSvgText() {
         if (cachedSvgText) return cachedSvgText;
-        const res = await fetch("./map.svg");
+        const res = await fetch("https://cdn.jsdelivr.net/gh/static-166/statics@main/map.svg");
         cachedSvgText = await res.text();
         return cachedSvgText;
     }
